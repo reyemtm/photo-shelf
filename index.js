@@ -407,6 +407,12 @@ const server = http.createServer(async (req, res) => {
   const asGet = method === 'HEAD' ? 'GET' : method;
   const { pathname } = urlFor(req);
 
+  // Unauthenticated liveness probe for orchestrators (Coolify/compose health
+  // checks can't send credentials) — must stay before the auth gate.
+  if (asGet === 'GET' && pathname === '/api/health') {
+    return sendJSON(res, 200, { ok: true });
+  }
+
   // Basic auth gate — every route (pages, API, images) is private
   if (AUTH_ENABLED && !isAuthorized(req)) {
     return unauthorized(res);

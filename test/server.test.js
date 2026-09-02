@@ -190,6 +190,17 @@ test('basic auth: no creds 401 / wrong 401 / right 200 (regression)', async () =
   }
 });
 
+test('/api/health stays open even when auth is on (Coolify healthcheck)', async () => {
+  const s = await startShelf({ auth: { user: 'u', pass: 'p' } });
+  try {
+    assert.equal((await fetch(s.base + '/api/health')).status, 200);
+    // but everything else is still gated
+    assert.equal((await fetch(s.base + '/api/photos')).status, 401);
+  } finally {
+    await s.stop();
+  }
+});
+
 test('auth is OFF when env vars are unset (regression)', async () => {
   const s = await startShelf();
   try {

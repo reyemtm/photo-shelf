@@ -7,14 +7,18 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - DATA_DIR=/data
+      # Set AUTH_USERNAME + AUTH_PASSWORD in your deploy (e.g. Coolify's env
+      # vars UI) — they flow into the container through these substitutions.
+      # Empty defaults keep local `docker compose up` auth-free.
+      - AUTH_USERNAME=${AUTH_USERNAME:-}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
     # Per IDEA.yml: ./data:/data mounts both DB and images in one data dir
     volumes:
       - ./data:/data
     restart: unless-stopped
     healthcheck:
-      # wget --spider sends HEAD; check / (HEAD /api/photos 404s without a
-      # server-side HEAD handler, and would 401 if auth vars are ever added)
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      # /api/health is exempt from auth (checks can't send credentials)
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
