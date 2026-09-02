@@ -492,9 +492,14 @@
           return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
+        // The currently displayed (possibly camera-filtered) shelf — arrow keys
+        // step through this exact list, so prev/next follows what you see.
+        let shelfPhotos = [];
+
         function renderGallery(photosList) {
+          shelfPhotos = photosList || [];
           gallery.innerHTML = '';
-          if (!photosList || !photosList.length) {
+          if (!shelfPhotos.length) {
             const empty = document.createElement('div');
             empty.style.cssText = 'padding:24px;color:var(--fg-soft);font-size:13px;text-align:center';
             empty.textContent = 'No photos yet. Share a photo URL to get started.';
@@ -504,10 +509,11 @@
           }
           const row = document.createElement('div');
           row.className = 'row';
-          photosList.forEach(p => {
+          shelfPhotos.forEach((p, i) => {
             const card = document.createElement('div');
             card.className = 'photo';
             card.dataset.json = JSON.stringify(p);
+            card.dataset.idx = i;
             const img = document.createElement('img');
             // Grid shows the small WebP thumbnail; the lightbox opens the full original.
             const gridFile = p.thumb || p.file;
@@ -538,10 +544,22 @@
         lightboxClose.addEventListener('click', closeLightbox);
 
         document.addEventListener('keydown', (e) => {
-          if (e.key !== 'Escape') return;
-          if (confirmModal.classList.contains('open')) closeConfirm();
-          else if (addModal.classList.contains('open')) closeModal();
-          else closeLightbox();
+          // Modals (confirm/delete, add) take priority — arrows do nothing while they're open.
+          if (confirmModal.classList.contains('open') || addModal.classList.contains('open')) {
+            if (e.key === 'Escape') {
+              if (confirmModal.classList.contains('open')) closeConfirm();
+              else closeModal();
+            }
+            return;
+          }
+          if (e.key === 'Escape') {
+            closeLightbox();
+            return;
+          }
+          if (!lightbox.classList.contains('open')) return;
+          // Reading order: →/↓ next photo, ←/↑ previous.
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') stepLightbox(1);
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') stepLightbox(-1);
         });
 
         function fmtExif(exif) {
@@ -561,10 +579,12 @@
         }
 
         let currentPhoto = null;
+        let currentIdx = -1;
 
-        function openLightbox(p) {
+        function openLightbox(p, idx) {
           if (!p) return;
           currentPhoto = p;
+          currentIdx = (typeof idx === 'number' && idx >= 0) ? idx : 0;
           lightboxImg.src = p.file ? ('/images/' + encodeURIComponent(p.file)) : (p.url || '');
           lightboxImg.alt = p.title || 'Photo';
           const title = p.title || p.url || '';
@@ -583,13 +603,21 @@
           lightboxImg.src = '';
         }
 
+        function stepLightbox(delta) {
+          if (!lightbox.classList.contains('open')) return;
+          const next = currentIdx + delta;
+          // Don't wrap around — stop at either end of the shelf.
+          if (next < 0 || next >= shelfPhotos.length) return;
+          openLightbox(shelfPhotos[next], next);
+        }
+
         // Photo click -> lightbox with EXIF + source link
         gallery.addEventListener('click', (e) => {
           const photo = e.target.closest('.photo');
           if (!photo) return;
           let p;
           try { p = JSON.parse(photo.dataset.json); } catch { return; }
-          openLightbox(p);
+          openLightbox(p, Number(photo.dataset.idx) || 0);
         });
 
         // Delete photo (lightbox trash button -> confirm dialog)
