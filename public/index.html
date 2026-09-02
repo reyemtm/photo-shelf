@@ -38,10 +38,30 @@
       min-height: 100vh;
     }
 
+    /* Fixed nav: full-width sticky bar; inner content stays 980px wide/centered. */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
     .container {
       max-width: 980px;
       margin: 0 auto;
-      padding: 8px 16px 24px;
+      padding: 8px 16px 0;
+    }
+
+    /* The shelf can grow wider than the nav so photos bleed one card
+       width past each side on big screens. 1427px = nav content (948px)
+       + 2 extra ~229.5px columns (the size cards get in the 980px nav),
+       so the grid auto-fills to 4 cols under the nav and 6 cols here. */
+    main {
+      width: 100%;
+      max-width: 1427px;
+      margin: 0 auto;
+      padding: 20px 12px 24px;
     }
 
     header {
@@ -49,8 +69,6 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 0 10px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 20px;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -353,7 +371,8 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="topbar">
+    <div class="container">
     <header>
       <div class="brand">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -376,11 +395,12 @@
         </button>
       </div>
     </header>
-
-    <main>
-      <div class="gallery" id="gallery"></div>
-    </main>
+    </div>
   </div>
+
+  <main>
+    <div class="gallery" id="gallery"></div>
+  </main>
 
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo preview">
     <button class="close" id="lightboxClose" aria-label="Close preview">×</button>
