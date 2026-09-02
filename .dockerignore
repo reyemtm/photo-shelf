@@ -1,0 +1,10 @@
+node_modules
+data
+images
+.git
+.freebuff
+.DS_Store
+*.log
+Dockerfile
+docker-compose.yml
+.dockerignore

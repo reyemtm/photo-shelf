@@ -1,0 +1,21 @@
+services:
+  photo-shelf:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATA_DIR=/data
+    # Per IDEA.yml: ./data:/data mounts both DB and images in one data dir
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    healthcheck:
+      # wget --spider sends HEAD; check / (HEAD /api/photos 404s without a
+      # server-side HEAD handler, and would 401 if auth vars are ever added)
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

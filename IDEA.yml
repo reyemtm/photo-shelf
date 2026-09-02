@@ -1,0 +1,42 @@
+app:
+  name: Photo Shelf
+  stack: Node 22 + node:http + better-sqlite3 + vanilla HTML/CSS/JS
+
+docker:
+  image: node:22
+  port: 3000
+  volume: ./data:/data
+
+storage:
+  database: /data/photos.db
+  images: /data/images/
+
+photo:
+  input: shared URL
+  process:
+    - fetch page or direct image
+    - find/download actual image
+    - extract EXIF
+    - save image to filesystem
+    - save metadata + original URL to SQLite
+
+api:
+  POST /api/photos       # save URL
+  GET  /api/photos       # gallery
+  GET  /images/:file     # image
+  GET  /                 # app
+
+pwa:
+  share_target: /api/photos
+  workflow: "Phone → Share → Photo Shelf → Save"
+
+ui:
+  - responsive image gallery
+  - photo detail + EXIF
+  - original/source link
+
+future:
+  - Dropbox backup
+  - tags
+  - favorites
+  - auth

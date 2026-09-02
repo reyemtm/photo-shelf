@@ -1,0 +1,21 @@
+# runtime data
+data/
+images/
+
+# local preview state (run docs, logs, absolute paths)
+.freebuff/
+LOG.json
+
+# deps / tooling
+node_modules/
+npm-debug.log*
+
+# env — real values never committed; keep only the template
+.env
+.env.*
+!.env.sample
+
+# OS junk
+.DS_Store
+Thumbs.db
+

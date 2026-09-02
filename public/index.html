@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Shelf</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --fg: #24292f;
+      --fg-soft: #57606a;
+      --border: #d0d7de;
+      --accent: #0969da;
+      --accent-hover: #0549a8;
+      --shadow: 0 1px 3px rgba(36,41,47,.12), 0 1px 2px rgba(36,41,47,.08);
+      --radius: 6px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --fg: #e6edf3;
+      --fg-soft: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent-hover: #79c0ff;
+      --shadow: 0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 8px 16px 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand svg { width: 22px; height: 22px; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover { background: var(--bg-secondary); border-color: var(--accent); }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--fg-soft);
+      padding: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .theme-toggle:hover { color: var(--fg); border-color: var(--accent); }
+
+    .stats {
+      color: var(--fg-soft);
+      font-size: 13px;
+    }
+
+    .gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Responsive shelf: cards fill the container (nav) width and wrap */
+    .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+    }
+
+    .photo {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .photo:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+      border-color: var(--accent);
+    }
+
+    .photo img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo .caption {
+      padding: 4px 6px;
+      margin-top: auto;
+      font-size: 11px;
+      color: var(--fg-soft);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      text-align: left;
+      line-height: 1.25;
+    }
+
+    /* Filter dropdown */
+    .filter-select {
+      background: var(--bg-secondary);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      font-size: 13px;
+      max-width: 220px;
+    }
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Lightbox: image with an info strip below it (no overlap) */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      cursor: pointer;
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lightbox-inner {
+      max-width: 94vw;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lightbox-inner img {
+      max-width: 100%;
+      max-height: calc(92vh - 140px);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 30px rgba(0,0,0,.5);
+      cursor: default;
+    }
+
+    .lightbox .close {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      z-index: 1;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 28px;
+      cursor: pointer;
+      opacity: .8;
+      transition: opacity 0.15s;
+      padding: 4px 8px;
+    }
+    .lightbox .close:hover { opacity: 1; }
+
+    .lightbox-info {
+      color: #fff;
+      text-align: center;
+      max-width: 100%;
+    }
+
+    .lightbox-info .lb-title {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .lightbox-info .lb-details {
+      font-size: 12px;
+      opacity: .8;
+      margin-top: 2px;
+    }
+
+    .lightbox-info a {
+      display: inline-block;
+      color: #79c0ff;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .lightbox-info a:hover { text-decoration: underline; }
+
+    .lb-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .lb-delete {
+      background: transparent;
+      border: 1px solid rgba(248,81,73,.6);
+      color: #f85149;
+      border-radius: var(--radius);
+      padding: 2px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .lb-delete:hover { background: rgba(248,81,73,.15); }
+
+    /* Add-photo modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1100;
+      background: rgba(0,0,0,.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .modal h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .modal label {
+      display: block;
+      font-size: 12px;
+      color: var(--fg-soft);
+      margin-bottom: 4px;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: var(--fg);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+    }
+
+    .modal input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(9,105,218,.15);
+    }
+
+    [data-theme="dark"] .modal input:focus {
+      box-shadow: 0 0 0 3px rgba(88,166,255,.15);
+    }
+
+    .modal .modal-error {
+      color: #d1242f;
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    .modal .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .btn:disabled { opacity: .6; cursor: default; }
+    .btn-danger { background: #da3633; border-color: #da3633; color: #fff; }
+    .btn-danger:hover { background: #b62324; }
+
+    @media (max-width: 640px) {
+      .row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+      .gallery { gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M21 15l-5-5L5 21"/>
+        </svg>
+        <span>Photo Shelf</span>
+      </div>
+      <div class="actions">
+        <span class="stats" id="stats">0 photos</span>
+        <select id="cameraFilter" class="filter-select" title="Filter by camera" aria-label="Filter by camera">
+          <option value="">All cameras</option>
+        </select>
+        <button class="btn" id="addBtn">+ Add photo</button>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <div class="gallery" id="gallery"></div>
+    </main>
+  </div>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo preview">
+    <button class="close" id="lightboxClose" aria-label="Close preview">×</button>
+    <div class="lightbox-inner">
+      <img id="lightboxImg" src="" alt="">
+      <div class="lightbox-info">
+        <div class="lb-title" id="lightboxCaption"></div>
+        <div class="lb-details" id="lightboxDetails"></div>
+        <div class="lb-actions">
+          <a id="lightboxLink" href="#" target="_blank" rel="noopener">View original ↗</a>
+          <button class="lb-delete" id="lightboxDelete">🗑 Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="confirmModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Confirm delete">
+      <h2>Delete photo?</h2>
+      <p id="confirmText" style="font-size:13px;color:var(--fg-soft);margin-bottom:14px">This removes the photo and its image file from the shelf.</p>
+      <div class="modal-actions">
+        <button class="btn" id="confirmCancel">Cancel</button>
+        <button class="btn btn-danger" id="confirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="addModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Add photo">
+      <h2>Add photo</h2>
+      <label for="addUrl">Photo URL</label>
+      <input type="url" id="addUrl" placeholder="https://… direct image or page" autocomplete="off">
+      <label for="addTitle">Title <span style="font-weight:400">(optional)</span></label>
+      <input type="text" id="addTitle" placeholder="My photo">
+      <div class="modal-error" id="addError" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="btn" id="addCancel">Cancel</button>
+        <button class="btn btn-primary" id="addSubmit">Add photo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+        const gallery = document.getElementById('gallery');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const lightboxCaption = document.getElementById('lightboxCaption');
+        const lightboxDetails = document.getElementById('lightboxDetails');
+        const lightboxLink = document.getElementById('lightboxLink');
+        const lightboxClose = document.getElementById('lightboxClose');
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const stats = document.getElementById('stats');
+        const addBtn = document.getElementById('addBtn');
+        const cameraFilter = document.getElementById('cameraFilter');
+
+        function filterQuery() {
+          const cam = cameraFilter ? cameraFilter.value : '';
+          return cam ? ('?camera=' + encodeURIComponent(cam)) : '';
+        }
+
+        async function loadPhotos() {
+          try {
+            const res = await fetch('/api/photos' + filterQuery());
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            renderGallery(await res.json());
+          } catch (err) {
+            gallery.innerHTML = '<div style="padding:24px;color:var(--fg-soft);font-size:13px;text-align:center">' +
+              'Failed to load photos: ' + escapeHtml(String(err.message || err)) + '</div>';
+          }
+        }
+
+        async function loadCameras() {
+          try {
+            const res = await fetch('/api/cameras');
+            if (!res.ok) return;
+            const cams = await res.json();
+            const prev = cameraFilter.value;
+            cameraFilter.innerHTML = '<option value="">All cameras</option>' +
+              cams.map(c => '<option value="' + escapeHtml(c.camera) + '">' + escapeHtml(c.camera) + ' (' + c.count + ')</option>').join('');
+            cameraFilter.value = prev;
+          } catch { /* keep current options */ }
+        }
+
+        cameraFilter.addEventListener('change', loadPhotos);
+
+        function escapeHtml(s) {
+          return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function renderGallery(photosList) {
+          gallery.innerHTML = '';
+          if (!photosList || !photosList.length) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:24px;color:var(--fg-soft);font-size:13px;text-align:center';
+            empty.textContent = 'No photos yet. Share a photo URL to get started.';
+            gallery.appendChild(empty);
+            stats.textContent = '0 photos';
+            return;
+          }
+          const row = document.createElement('div');
+          row.className = 'row';
+          photosList.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'photo';
+            card.dataset.json = JSON.stringify(p);
+            const img = document.createElement('img');
+            // Grid shows the small WebP thumbnail; the lightbox opens the full original.
+            const gridFile = p.thumb || p.file;
+            img.src = gridFile ? ('/images/' + encodeURIComponent(gridFile)) : (p.url || '');
+            img.alt = p.title || p.url || 'photo';
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            card.appendChild(img);
+            const cap = document.createElement('span');
+            cap.className = 'caption';
+            cap.textContent = (p.exif && p.exif.camera) ? p.exif.camera : '';
+            if (!cap.textContent) cap.style.display = 'none'; // no empty bar when no camera
+            card.appendChild(cap);
+            row.appendChild(card);
+          });
+          gallery.appendChild(row);
+          updateStats();
+        }
+
+        function updateStats() {
+          const count = gallery.querySelectorAll('.photo').length;
+          stats.textContent = count + ' photo' + (count === 1 ? '' : 's');
+        }
+
+        lightbox.addEventListener('click', (e) => {
+          if (e.target === lightbox) closeLightbox();
+        });
+        lightboxClose.addEventListener('click', closeLightbox);
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Escape') return;
+          if (confirmModal.classList.contains('open')) closeConfirm();
+          else if (addModal.classList.contains('open')) closeModal();
+          else closeLightbox();
+        });
+
+        function fmtExif(exif) {
+          if (!exif) return [];
+          const parts = [];
+          if (exif.camera) parts.push(exif.camera);
+          if (exif.lens) parts.push(exif.lens);
+          if (exif.focalLength) parts.push(exif.focalLength + 'mm');
+          if (exif.fNumber) parts.push('f/' + exif.fNumber);
+          if (exif.exposureTime) parts.push(exif.exposureTime + 's');
+          if (exif.iso) parts.push('ISO ' + exif.iso);
+          if (exif.dateTime) parts.push(new Date(exif.dateTime).toLocaleString());
+          if (exif.gps && exif.gps.lat != null && exif.gps.lng != null) {
+            parts.push(exif.gps.lat.toFixed(4) + ', ' + exif.gps.lng.toFixed(4));
+          }
+          return parts;
+        }
+
+        let currentPhoto = null;
+
+        function openLightbox(p) {
+          if (!p) return;
+          currentPhoto = p;
+          lightboxImg.src = p.file ? ('/images/' + encodeURIComponent(p.file)) : (p.url || '');
+          lightboxImg.alt = p.title || 'Photo';
+          const title = p.title || p.url || '';
+          lightboxCaption.textContent = title;
+          const detailParts = fmtExif(p.exif);
+          lightboxDetails.textContent = detailParts.join(' · ');
+          lightboxDetails.style.display = detailParts.length ? '' : 'none';
+          const src = p.url || p.source;
+          lightboxLink.href = src || '#';
+          lightboxLink.style.display = src ? '' : 'none';
+          lightbox.classList.add('open');
+        }
+
+        function closeLightbox() {
+          lightbox.classList.remove('open');
+          lightboxImg.src = '';
+        }
+
+        // Photo click -> lightbox with EXIF + source link
+        gallery.addEventListener('click', (e) => {
+          const photo = e.target.closest('.photo');
+          if (!photo) return;
+          let p;
+          try { p = JSON.parse(photo.dataset.json); } catch { return; }
+          openLightbox(p);
+        });
+
+        // Delete photo (lightbox trash button -> confirm dialog)
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmText = document.getElementById('confirmText');
+        const confirmCancel = document.getElementById('confirmCancel');
+        const confirmOk = document.getElementById('confirmOk');
+        const lightboxDelete = document.getElementById('lightboxDelete');
+
+        function openConfirm() {
+          if (!currentPhoto) return;
+          confirmText.textContent = 'Delete "' + (currentPhoto.title || currentPhoto.url || 'photo') + '"? This removes the photo and its image file.';
+          confirmModal.classList.add('open');
+        }
+
+        function closeConfirm() {
+          confirmModal.classList.remove('open');
+        }
+
+        lightboxDelete.addEventListener('click', openConfirm);
+        confirmCancel.addEventListener('click', closeConfirm);
+        confirmModal.addEventListener('click', (e) => {
+          if (e.target === confirmModal) closeConfirm();
+        });
+
+        confirmOk.addEventListener('click', async () => {
+          const p = currentPhoto;
+          if (!p || !p.id) return;
+          confirmOk.disabled = true;
+          try {
+            const res = await fetch('/api/photos/' + encodeURIComponent(p.id), { method: 'DELETE' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+            closeConfirm();
+            closeLightbox();
+            await loadCameras();
+            await loadPhotos();
+          } catch (err) {
+            confirmText.textContent = 'Delete failed: ' + (err && err.message ? err.message : err);
+          } finally {
+            confirmOk.disabled = false;
+          }
+        });
+
+        // Theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+          updateThemeIcon(next);
+        });
+
+        function updateThemeIcon(theme) {
+          if (theme === 'dark') {
+            themeIcon.innerHTML = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+          } else {
+            themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>';
+          }
+        }
+
+        // Add photo modal -> POST URL -> reload gallery from API
+        const addModal = document.getElementById('addModal');
+        const addUrl = document.getElementById('addUrl');
+        const addTitle = document.getElementById('addTitle');
+        const addCancel = document.getElementById('addCancel');
+        const addSubmit = document.getElementById('addSubmit');
+        const addError = document.getElementById('addError');
+
+        function openModal() {
+          addUrl.value = '';
+          addTitle.value = '';
+          addError.textContent = '';
+          addModal.classList.add('open');
+          setTimeout(() => addUrl.focus(), 0);
+        }
+
+        function closeModal() {
+          addModal.classList.remove('open');
+          addError.textContent = '';
+        }
+
+        addBtn.addEventListener('click', openModal);
+        addCancel.addEventListener('click', closeModal);
+        addModal.addEventListener('click', (e) => {
+          if (e.target === addModal) closeModal();
+        });
+
+        async function submitAdd() {
+          const url = addUrl.value.trim();
+          if (!url) {
+            addError.textContent = 'Please enter a URL.';
+            addUrl.focus();
+            return;
+          }
+          if (!/^https?:\/\//i.test(url)) {
+            addError.textContent = 'URL must start with http:// or https://';
+            addUrl.focus();
+            return;
+          }
+          addSubmit.disabled = true;
+          addSubmit.textContent = 'Saving…';
+          addError.textContent = '';
+          try {
+            const res = await fetch('/api/photos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url, title: addTitle.value.trim() })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+            closeModal();
+            await loadCameras();
+            await loadPhotos();
+          } catch (err) {
+            addError.textContent = 'Could not save: ' + (err && err.message ? err.message : err);
+          } finally {
+            addSubmit.disabled = false;
+            addSubmit.textContent = 'Add photo';
+          }
+        }
+
+        addSubmit.addEventListener('click', submitAdd);
+        addUrl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); submitAdd(); }
+        });
+
+        loadCameras();
+        loadPhotos();
+      })();
+  </script>
+</body>
+</html>
